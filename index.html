@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>push-service</title>
+
+  <base href="/" />
+
+  <!-- This meta viewport ensures the webpage's dimensions change according to the device it's on. This is called Responsive Web Design.-->
+  <meta name="viewport"
+        content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0" />
+  <meta name="description"
+        content="This is a push-service app" />
+
+  <meta name="theme-color"
+        media="(prefers-color-scheme: dark)"
+        content="#181818" />
+  <meta name="theme-color"
+        media="(prefers-color-scheme: light)"
+        content="#f3f3f3" />
+
+  <!-- These meta tags are Apple-specific, and set the web application to run in full-screen mode with a black status bar. Learn more at https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html-->
+  <meta name="apple-mobile-web-app-capable"
+        content="yes" />
+  <meta name="apple-mobile-web-app-title"
+        content="push-service" />
+  <meta name="apple-mobile-web-app-status-bar-style"
+        content="black" />
+
+  <!-- This tag is used by the push-service CLI to identify template projects. Don't remove if you are using the CLI. -->
+  <meta name="pwa-starter-template-identity"
+        content="pwa-starter" />
+
+  <!-- Imports an icon to represent the document. -->
+  <link rel="icon"
+        href="/assets/icons/icon_24.png"
+        type="image/png" />
+
+  <!-- Imports the manifest to represent the web application. A web app must have a manifest to be a PWA. -->
+  <link rel="manifest"
+        href="/manifest.json" />
+
+  <!-- light mode and dark mode CSS -->
+  <link rel="stylesheet"
+        media="(prefers-color-scheme:light)"
+        href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.73/dist/themes/light.css">
+  <link rel="stylesheet"
+        media="(prefers-color-scheme:dark)"
+        href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.73/dist/themes/dark.css"
+        onload="document.documentElement.classList.add('sl-theme-dark');">
+
+</head>
+
+<body>
+
+  <a href="https://cleverpush.com/de/test-notifications/">
+    Online Dienst zum
+    testen als Vergleich</a><br><br>
+
+  <button onclick="askPermission()"
+          style="height: 50px; background-color: cyan; border-radius: 10px;">
+    Aktivieren
+    von Benachrichtigungen und eine Testnachricht generieren
+  </button>
+
+  <br>
+  <br>
+  <br>
+
+  <div id="log"
+       style="width: 100%; padding:5px; font-family: monospace; background-color:grey; min-height: 400px;">
+  </div>
+
+  <script>
+    function log(text) {
+      var div = document.getElementById('log');
+      div.innerHTML += text;
+      div.innerHTML += '<br>----------<br>';
+    }
+
+
+    function registerServiceWorker() {
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw_empty.js')
+          .then(function(registration) {
+            log('Service worker successfully registered.');
+
+            return registration;
+          })
+          .catch(function(err) {
+            log('Unable to register service worker.')
+            log(err)
+          });
+      }
+    }
+
+
+    async function askPermission(registration) {
+      const permissionResult_1 = await new Promise(function(resolve, reject) {
+        const permissionResult = Notification.requestPermission(
+          function(
+            result) {
+            resolve(result);
+          });
+
+
+
+        if (permissionResult) {
+          permissionResult.then(resolve, reject);
+          subscribeUserToPush(registration)
+        }
+      });
+
+
+
+      if (permissionResult_1 !== 'granted') {
+        log('sie müssen die Notifications in ihrem Browser freigeben');
+        log('permission denied for notifications')
+        alert('sie müssen die Notifications in ihrem Browser freigeben');
+        throw new Error('permission denied for notifications');
+      }
+    }
+
+
+    //private: KaEIigInUn6APxjKwzZbQd8REJ5rN_KrNzyFkwLQv48
+    //public: BNmkUvSn2ITltV0cbxE8PxDpE__NMZTtRHOrHc3H75u_cybdrBzrv1ROtVu0CBiduJXKOpFNTF8IVZXrqWnsKEk
+    async function subscribeUserToPush(registration) {
+      const subscribeOptions = {
+        userVisibleOnly: true,
+        applicationServerKey: 'BNmkUvSn2ITltV0cbxE8PxDpE__NMZTtRHOrHc3H75u_cybdrBzrv1ROtVu0CBiduJXKOpFNTF8IVZXrqWnsKEk',
+      };
+
+      registerServiceWorker()
+      const swRegistration = await navigator.serviceWorker.getRegistration();
+
+      if (swRegistration) {
+        swRegistration.pushManager
+
+          .subscribe(subscribeOptions)
+          .then((pushSubscription) => {
+            const obj = pushSubscription.toJSON()
+
+            const endpoint = obj.endpoint;
+            const expirationTime = obj.expirationTime;
+            const auth = obj.keys.auth;
+            const p256dh = obj.keys.p256dh;
+
+            console.info("Zugang gewährt: " + endpoint)
+            log('Nofitications können gesendet werden.');
+            log('Sie sollten ebenfalls eine Testnachricht erhalten');
+
+            swRegistration.showNotification(
+              'Notifications sind aktiviert', {
+                body: "Sie bekommen ab jetzt Nachrichten",
+                icon: "/favicon.ico"
+              });
+
+            // (async () => {
+            //   const rawResponse = await fetch(
+            //   'http://127.0.0.1:3000', {
+            //     method: 'POST',
+            //     headers: {
+            //       'Accept': 'application/json',
+            //       'Content-Type': 'application/json'
+            //     },
+            //     body: JSON.stringify({
+            //       endpoint, expirationTime, auth, p256dh
+            //     })
+            //   });
+            //   const content = await rawResponse.json();
+
+            //   console.log('Subscibed to Notifications');
+            // })();
+          })
+          .catch((error) => {
+            console.error(error);
+            log(
+              'Die Notifications können nicht aktiviert werden. Sie müssen die Funktion im Browser Freigeben'
+            );
+            log(error);
+          })
+      }
+
+    }
+  </script>
+
+</body>
+
+</html>
