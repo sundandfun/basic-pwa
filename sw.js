@@ -73,42 +73,29 @@ self.addEventListener( 'push', function ( event )
 
     const data = event.data?.json() ?? {};
 
-    const title = data.title || "Something Has Happened";
+    const title = data.title || "No title set";
     const body = data.body || "";
-    const tag = 'sadasdasd' + Math.random(); //replace with same name
-    const icon = "https://developer.mozilla.org/favicon.ico";
-
+    const tag = 'optional_tag';
+    const icon = "icons/64x64.png";
+    const image = "icons/400x200.png";
 
     event.waitUntil(
-        self.registration.showNotification(title, {
+        self.registration.showNotification( title, {
             body: body,
             icon: icon,
             tag: tag,
-        })
+            image: image
+        } )
     );
 
-
-
-    // self.Notification.addEventListener( "click", () =>
-    // {
-    //     clients.openWindow(
-    //         "https://example.blog.com/2015/03/04/something-new.html",
-    //     );
-    // } );
-
-
-
-    //     // Returns string
-    // event.data.text()
-
-    // // Parses data as JSON string and returns an Object
-    // event.data.json()
+    self.Notification.addEventListener( "click", () =>
+    {
+        clients.openWindow(
+            "https://example.com",
+        );
+    } );
 
 } );
-
-
-
-
 
 
 
