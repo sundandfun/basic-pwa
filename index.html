@@ -3,15 +3,15 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>push-service</title>
+    <title>Minimal PWA and Push Service Template</title>
 
     <base href="/" />
 
-    <!-- This meta viewport ensures the webpage's dimensions change according to the device it's on. This is called Responsive Web Design.-->
     <meta
         name="viewport"
         content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0"
     />
+
     <meta
         name="description"
         content="This is a push-service app"
@@ -81,7 +81,7 @@
         Online Dienst zum
         testen als Vergleich
     </a>
-    
+
     <br><br>
 
     <button
@@ -114,10 +114,11 @@
 
         function registerServiceWorker()
         {
-
             if ( 'serviceWorker' in navigator )
             {
-                navigator.serviceWorker.register( '/sw_empty.js' )
+                const swOptions = { scope: "./", updateViaCache: 'none' }
+
+                navigator.serviceWorker.register( '/sw.js', swOptions )
                     .then( function ( registration )
                     {
                         log( 'Service worker successfully registered.' );
@@ -170,69 +171,84 @@
         // public: BNmkUvSn2ITltV0cbxE8PxDpE__NMZTtRHOrHc3H75u_cybdrBzrv1ROtVu0CBiduJXKOpFNTF8IVZXrqWnsKEk
         async function subscribeUserToPush( registration )
         {
+            registerServiceWorker();
+
+            const swRegistration
+                = await navigator.serviceWorker.getRegistration();
+
+            if ( !swRegistration )
+            {
+                log( 'Push notifications need Serviceworker' )
+                throw new Error( 'Service worker must be registered before sending push notifications' );
+            };
+
             const subscribeOptions = {
                 userVisibleOnly: true,
                 applicationServerKey: '<public key>',
             };
 
-            registerServiceWorker()
-            const swRegistration = await navigator.serviceWorker.getRegistration();
+            swRegistration.pushManager
 
-            if ( swRegistration )
-            {
-                swRegistration.pushManager
+                .subscribe( subscribeOptions )
+                .then( ( pushSubscription ) =>
+                {
+                    const obj = pushSubscription.toJSON()
 
-                    .subscribe( subscribeOptions )
-                    .then( ( pushSubscription ) =>
+                    const endpoint = obj.endpoint;
+                    const expirationTime = obj.expirationTime;
+                    const auth = obj.keys.auth;
+                    const p256dh = obj.keys.p256dh;
+
+                    log( 'Notifications permission granted' );
+
+                    log( 'You will receive a test notification if everything is working' );
+
+                    // Send a notification for test
+                    swRegistration.showNotification(
+                        'Notifications are working', {
+                        body: "This is an automatic test notification",
+                        icon: "icons/48x48.png"
+                    } );
+
+                    // Usually you will need to save the response in the Backend
+                    // To send messages you will need the VAPID Keys, auth and endpoint
+                    // (async () => {
+                    //   const rawResponse = await fetch(
+                    //   'http://127.0.0.1:3000', {
+                    //     method: 'POST',
+                    //     headers: {
+                    //       'Accept': 'application/json',
+                    //       'Content-Type': 'application/json'
+                    //     },
+                    //     body: JSON.stringify({
+                    //       endpoint, expirationTime, auth, p256dh
+                    //     })
+                    //   });
+                    //   const content = await rawResponse.json();
+
+                    //   log('Subscibed to Notifications');
+                    // })();
+                } )
+                .catch( ( error ) =>
+                {
+                    log(
+                        'Error subscribing for notifications'
+                    );
+
+                    if ( error.code = 'InvalidCharacterError' )
                     {
-                        const obj = pushSubscription.toJSON()
-
-                        const endpoint = obj.endpoint;
-                        const expirationTime = obj.expirationTime;
-                        const auth = obj.keys.auth;
-                        const p256dh = obj.keys.p256dh;
-
-                        log( 'Notifications permission granted' );
-
-                        log( 'You will receive a test notification if everything is working' );
-
-                        // Send a notification for test
-                        swRegistration.showNotification(
-                            'Notifications are working', {
-                            body: "This is an automatic test notification",
-                            icon: "icons/48x48.png"
-                        } );
-
-                        // Usually you will need to save the response in the Backend
-                        // To send messages you will need the VAPID Keys, auth and endpoint
-                        // (async () => {
-                        //   const rawResponse = await fetch(
-                        //   'http://127.0.0.1:3000', {
-                        //     method: 'POST',
-                        //     headers: {
-                        //       'Accept': 'application/json',
-                        //       'Content-Type': 'application/json'
-                        //     },
-                        //     body: JSON.stringify({
-                        //       endpoint, expirationTime, auth, p256dh
-                        //     })
-                        //   });
-                        //   const content = await rawResponse.json();
-
-                        //   log('Subscibed to Notifications');
-                        // })();
-                    } )
-                    .catch( ( error ) =>
+                        log( 'Your public applicationServerKey is not in the right format' )
+                    }
+                    else 
                     {
-                        console.error( error );
-                        log(
-                            'You probably disabled notifications or not granted permission'
-                        );
-                        log( error );
-                    } )
-            }
+                        log( error )
+                    }
 
+                    throw new Error( error );
+                } )
         }
+
+
     </script>
 
 </body>
