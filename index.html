@@ -146,40 +146,38 @@
 
         async function askPermission( registration )
         {
-            await new Promise( function ( resolve, reject )
+            const persmission = await Notification.requestPermission();
+
+            if ( persmission === 'granted' )
             {
-                const permissionResult = Notification.requestPermission(
-                    function (
-                        result )
-                    {
-                        resolve( result );
-                    } );
-
-
-
-                if ( permissionResult === 'granted' )
-                {
-                    permissionResult.then( resolve, reject );
-                    subscribeToPush( registration )
-                } else
-                {
-                    log( 'Permission denied for notifications. You have to enable notifications in browser' )
-                    throw new Error( 'permission denied for notifications' );
-                }
-            } );
+                subscribeToPush( registration )
+            } else
+            {
+                log( 'Permission denied for notifications. You have to enable notifications in browser' )
+                throw new Error( 'permission denied for notifications' );
+            }
         }
 
         async function sendNotification()
         {
-            const swRegistration
-                = await navigator.serviceWorker.getRegistration();
+            if ( Notification.permission === "granted" )
+            {
 
-            swRegistration.showNotification(
-                'Notifications are working', {
-                body: "This is an automatic test notification",
-                icon: "icons/64x64.png",
-                image: "icons/400x200.png"
-            } );
+                const swRegistration
+                    = await navigator.serviceWorker.getRegistration();
+
+                swRegistration.showNotification(
+                    'Notifications are working', {
+                    body: "This is an automatic test notification",
+                    icon: "icons/64x64.png",
+                    image: "icons/400x200.png"
+                } );
+                log( 'a test notification was sent' )
+            }
+            else
+            {
+                log( 'Permission for notifications are not granted' )
+            }
         }
 
 
