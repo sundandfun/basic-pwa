@@ -28,18 +28,50 @@ function registerServiceWorker()
 }
 
 
-async function askPermission( registration )
+async function askPermission()
 {
     const persmission = await Notification.requestPermission();
 
     if ( persmission === 'granted' )
     {
-        subscribeToPush( registration )
+        subscribeToPush()
     } else
     {
         log( 'Permission denied for notifications. You have to enable notifications in browser' )
         throw new Error( 'permission denied for notifications' );
     }
+}
+
+async function revokePermission()
+{
+    const swRegistration = await navigator.serviceWorker.getRegistration();
+
+    if ( !swRegistration )
+    {
+        log( 'to unsubscribe your need a service worker' )
+        return false;
+    }
+
+    const pushSubscription = await swRegistration.pushManager.getSubscription()
+
+    if ( !pushSubscription )
+    {
+        log( 'There is no subscription to revoke' )
+        return false;
+    }
+
+    const unsub = await pushSubscription.unsubscribe()
+
+    if ( unsub )
+    {
+        log( 'Permission to send notifications revoked' )
+        await pushSubscriptionToServer( pushSubscription, false )
+    }
+    else
+    {
+        log( 'Could not unsubscribe' )
+    }
+
 }
 
 async function sendNotification()
@@ -60,7 +92,8 @@ async function sendNotification()
     }
     else
     {
-        log( 'Permission for notifications are not granted' )
+        log( 'Permission denied for notifications. You have to enable notifications in browser' )
+        throw new Error( 'permission denied for notifications' );
     }
 }
 
@@ -69,7 +102,7 @@ async function sendNotification()
 // Private key is secret
 // private: KaEIigInUn6APxjKwzZbQd8REJ5rN_KrNzyFkwLQv48
 // public: BNmkUvSn2ITltV0cbxE8PxDpE__NMZTtRHOrHc3H75u_cybdrBzrv1ROtVu0CBiduJXKOpFNTF8IVZXrqWnsKEk
-async function subscribeToPush( registration )
+async function subscribeToPush()
 {
     registerServiceWorker();
 
@@ -92,38 +125,15 @@ async function subscribeToPush( registration )
         .subscribe( subscribeOptions )
         .then( async ( pushSubscription ) =>
         {
-            const obj = pushSubscription.toJSON()
+            await pushSubscriptionToServer( pushSubscription, true )
 
-            const endpoint = obj.endpoint;
-            const expirationTime = obj.expirationTime;
-            const auth = obj.keys.auth;
-            const p256dh = obj.keys.p256dh;
-
-            log( 'Notifications permission granted' );
 
             log( 'You will receive a test notification if everything is working' );
 
             // Send a notification for test
             await sendNotification();
 
-            // Usually you will need to save the response in the Backend
-            // To send messages you will need the VAPID Keys, auth and endpoint
-            // (async () => {
-            //   const rawResponse = await fetch(
-            //   'http://127.0.0.1:3000', {
-            //     method: 'POST',
-            //     headers: {
-            //       'Accept': 'application/json',
-            //       'Content-Type': 'application/json'
-            //     },
-            //     body: JSON.stringify({
-            //       endpoint, expirationTime, auth, p256dh
-            //     })
-            //   });
-            //   const content = await rawResponse.json();
 
-            //   log('Subscibed to Notifications');
-            // })();
         } )
         .catch( ( error ) =>
         {
@@ -131,7 +141,7 @@ async function subscribeToPush( registration )
                 'Error subscribing for notifications'
             );
 
-            if ( error.code = 'InvalidCharacterError' )
+            if ( error.code == 'InvalidCharacterError' )
             {
                 log( 'Your public applicationServerKey is not in the right format' )
             }
@@ -142,4 +152,37 @@ async function subscribeToPush( registration )
 
             throw new Error( error );
         } )
+}
+
+// Usually you will need to save the response in the Backend
+// To send messages you will need the VAPID Keys, auth and endpoint
+async function pushSubscriptionToServer( pushSubscription, status )
+{
+    const obj = pushSubscription.toJSON()
+
+    const endpoint = obj.endpoint;
+    const expirationTime = obj.expirationTime;
+    const auth = obj.keys.auth;
+    const p256dh = obj.keys.p256dh;
+
+    log( 'Notifications synched to backend' );
+
+    // await ( async () =>
+    // {
+    //     const rawResponse = await fetch(
+    //         'http://localhost:3000', {
+    //         method: 'POST',
+    //         headers: {
+    //             'Accept': 'application/json',
+    //             'Content-Type': 'application/json'
+    //         },
+    //         body: JSON.stringify( {
+    //             endpoint, expirationTime, auth, p256dh, status
+    //         } )
+    //     } );
+    //     const serverResponse = await rawResponse.json();
+
+    //     log( 'response saved to server' );
+    //     log( serverResponse )
+    // } )();
 }
